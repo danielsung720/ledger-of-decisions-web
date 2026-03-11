@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -62,7 +62,7 @@ jobs:
     name: Deploy Production (main)
     runs-on: ubuntu-latest
     needs: ci-gate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
