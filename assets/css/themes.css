@@ -1,0 +1,311 @@
+/* ================================
+   Theme System - CSS Custom Properties
+   ================================
+   三種主題：default (暖色療癒), code (程式碼), ocean (海洋清新)
+*/
+
+/* ================================
+   Theme: Default (Warm Healing)
+   ================================ */
+:root,
+[data-theme='default'] {
+  /* Background */
+  --color-bg: #fffbf7;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #fff8f2;
+
+  /* Border */
+  --color-border: #f5e6d3;
+  --color-border-hover: #d9cfc2;
+
+  /* Text */
+  --color-text: #3d3833;
+  --color-text-secondary: #5c554d;
+  --color-text-muted: #8c8279;
+  --color-text-placeholder: #b8ac9e;
+
+  /* Primary */
+  --color-primary: #d98971;
+  --color-primary-rgb: 217, 137, 113;
+  --color-primary-light: #fdf5f2;
+  --color-primary-hover: #e09d84;
+  --color-primary-active: #c67a62;
+
+  /* Secondary */
+  --color-secondary: #9dbf9f;
+  --color-secondary-light: #f0f6f0;
+
+  /* Semantic */
+  --color-success: #7eb88c;
+  --color-success-light: #f0f6f0;
+  --color-warning: #e8b86d;
+  --color-warning-light: #fdf6e9;
+  --color-error: #d9936a;
+  --color-error-light: #fdf2ed;
+  --color-info: #7ba3c9;
+  --color-info-light: #e8f1f8;
+
+  /* Intent */
+  --color-intent-necessity: #7ba3c9;
+  --color-intent-necessity-light: #e8f1f8;
+  --color-intent-efficiency: #e8b86d;
+  --color-intent-efficiency-light: #fdf6e9;
+  --color-intent-enjoyment: #d98971;
+  --color-intent-enjoyment-light: #fdf5f2;
+  --color-intent-recovery: #9dbf9f;
+  --color-intent-recovery-light: #f0f6f0;
+  --color-intent-impulse: #c9a3b8;
+  --color-intent-impulse-light: #f8f0f5;
+
+  /* Typography */
+  --font-family-sans: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  --font-family-display: 'DM Sans', 'Inter', system-ui;
+  --font-family-mono: 'DM Sans', 'Inter', monospace;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(61, 56, 51, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(61, 56, 51, 0.07), 0 2px 4px -1px rgba(61, 56, 51, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(61, 56, 51, 0.08), 0 4px 6px -2px rgba(61, 56, 51, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(61, 56, 51, 0.08), 0 10px 10px -5px rgba(61, 56, 51, 0.03);
+  --shadow-focus: 0 0 0 3px rgba(217, 137, 113, 0.15);
+
+  /* Overlay */
+  --overlay-bg: rgba(61, 56, 51, 0.4);
+}
+
+/* ================================
+   Theme: Code (Warp Terminal Style)
+   ================================ */
+[data-theme='code'] {
+  /* Background - Deep purple-gray like Warp */
+  --color-bg: #191a2a;
+  --color-surface: #252836;
+  --color-surface-secondary: #1e1f2e;
+
+  /* Border */
+  --color-border: #3a3d4e;
+  --color-border-hover: #4e5265;
+
+  /* Text */
+  --color-text: #f8f8f2;
+  --color-text-secondary: #bfbfcf;
+  --color-text-muted: #8b8da0;
+  --color-text-placeholder: #5c5e72;
+
+  /* Primary (Pink/Magenta - Warp accent) */
+  --color-primary: #ff79c6;
+  --color-primary-rgb: 255, 121, 198;
+  --color-primary-light: #3d2940;
+  --color-primary-hover: #ff92d0;
+  --color-primary-active: #e668b0;
+
+  /* Secondary (Purple) */
+  --color-secondary: #bd93f9;
+  --color-secondary-light: #332847;
+
+  /* Semantic - Vibrant Warp colors */
+  --color-success: #50fa7b;
+  --color-success-light: #1e3728;
+  --color-warning: #f1fa8c;
+  --color-warning-light: #353720;
+  --color-error: #ff5555;
+  --color-error-light: #3d2020;
+  --color-info: #8be9fd;
+  --color-info-light: #1e343a;
+
+  /* Intent - Colorful segment badges */
+  --color-intent-necessity: #8be9fd;
+  --color-intent-necessity-light: #1e343a;
+  --color-intent-efficiency: #f1fa8c;
+  --color-intent-efficiency-light: #353720;
+  --color-intent-enjoyment: #ff79c6;
+  --color-intent-enjoyment-light: #3d2940;
+  --color-intent-recovery: #50fa7b;
+  --color-intent-recovery-light: #1e3728;
+  --color-intent-impulse: #ffb86c;
+  --color-intent-impulse-light: #3d2d1e;
+
+  /* Typography */
+  --font-family-sans: 'JetBrains Mono', 'Fira Code', 'Inter', monospace;
+  --font-family-display: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Border Radius (Modern rounded badges) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows (Dark with pink glow) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 121, 198, 0.15);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.6), 0 0 4px rgba(255, 121, 198, 0.2);
+  --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.7), 0 0 8px rgba(255, 121, 198, 0.25);
+  --shadow-focus: 0 0 0 2px rgba(255, 121, 198, 0.5);
+
+  /* Overlay */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+}
+
+/* ================================
+   Theme: Ocean (Fresh & Calm)
+   ================================ */
+[data-theme='ocean'] {
+  /* Background */
+  --color-bg: #f0f8ff;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #e6f3fa;
+
+  /* Border */
+  --color-border: #b8d4e8;
+  --color-border-hover: #8fbfd9;
+
+  /* Text */
+  --color-text: #1b3a4b;
+  --color-text-secondary: #2d5f7c;
+  --color-text-muted: #5d8aa8;
+  --color-text-placeholder: #90b4c6;
+
+  /* Primary (Ocean Blue) */
+  --color-primary: #0077b6;
+  --color-primary-rgb: 0, 119, 182;
+  --color-primary-light: #e0f2fe;
+  --color-primary-hover: #0096c7;
+  --color-primary-active: #005f8a;
+
+  /* Secondary (Coral) */
+  --color-secondary: #ff7f50;
+  --color-secondary-light: #fff0eb;
+
+  /* Semantic */
+  --color-success: #48c9b0;
+  --color-success-light: #e8faf6;
+  --color-warning: #f4d03f;
+  --color-warning-light: #fffbeb;
+  --color-error: #ff7f50;
+  --color-error-light: #fff0eb;
+  --color-info: #0077b6;
+  --color-info-light: #e0f2fe;
+
+  /* Intent */
+  --color-intent-necessity: #0077b6;
+  --color-intent-necessity-light: #e0f2fe;
+  --color-intent-efficiency: #f4d03f;
+  --color-intent-efficiency-light: #fffbeb;
+  --color-intent-enjoyment: #ff7f50;
+  --color-intent-enjoyment-light: #fff0eb;
+  --color-intent-recovery: #48c9b0;
+  --color-intent-recovery-light: #e8faf6;
+  --color-intent-impulse: #9b59b6;
+  --color-intent-impulse-light: #f5eeff;
+
+  /* Typography */
+  --font-family-sans: 'Nunito', 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  --font-family-display: 'Nunito', 'Inter', system-ui;
+  --font-family-mono: 'Fira Code', 'Inter', monospace;
+
+  /* Border Radius (Rounded) */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  /* Shadows (Blue-tinted) */
+  --shadow-sm: 0 2px 4px rgba(0, 119, 182, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 119, 182, 0.12), 0 2px 4px rgba(27, 58, 75, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 119, 182, 0.15), 0 4px 8px rgba(27, 58, 75, 0.06);
+  --shadow-xl: 0 16px 48px rgba(0, 119, 182, 0.18), 0 8px 16px rgba(27, 58, 75, 0.08);
+  --shadow-focus: 0 0 0 4px rgba(0, 119, 182, 0.15);
+
+  /* Overlay */
+  --overlay-bg: rgba(27, 58, 75, 0.35);
+}
+
+/* ================================
+   Theme Transition
+   ================================ */
+html {
+  transition-property: background-color;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family-sans);
+}
+
+/* Global theme transitions */
+* {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+/* Disable transitions on page load to prevent flash */
+.preload,
+.preload * {
+  transition: none !important;
+}
+
+/* ================================
+   Code Theme Special Styles
+   ================================ */
+[data-theme='code'] input,
+[data-theme='code'] textarea,
+[data-theme='code'] select {
+  font-family: var(--font-family-mono);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+[data-theme='code'] input:focus,
+[data-theme='code'] textarea:focus,
+[data-theme='code'] select:focus {
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 1px var(--color-primary),
+    0 0 8px rgba(255, 121, 198, 0.35);
+}
+
+/* Numbers use monospace font in code theme */
+[data-theme='code'] .font-number,
+[data-theme='code'] .amount {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================================
+   Ocean Theme Special Styles
+   ================================ */
+[data-theme='ocean'] input:focus,
+[data-theme='ocean'] textarea:focus,
+[data-theme='ocean'] select:focus {
+  border-color: var(--color-primary);
+  background: #f0f9ff;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ================================
+   Respect reduced motion preference
+   ================================ */
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}

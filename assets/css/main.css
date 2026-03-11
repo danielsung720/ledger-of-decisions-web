@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-theme-bg font-sans text-theme-text antialiased;
+  }
+
+  /* Numbers use DM Sans for better readability */
+  .font-number {
+    font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* Focus visible styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-theme-primary ring-offset-2;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Selection color */
+  ::selection {
+    @apply bg-theme-primary-light text-theme-text;
+  }
+}
+
+@layer components {
+  /* Card base styles */
+  .card {
+    @apply rounded-lg border border-theme-border bg-theme-surface p-6 shadow-md;
+  }
+
+  .card-hover {
+    @apply transition-all duration-normal hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  /* Button base styles */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-fast;
+  }
+
+  .btn-primary {
+    @apply btn h-12 bg-theme-primary px-6 text-white shadow-sm;
+    @apply hover:-translate-y-px hover:bg-theme-primary-hover hover:shadow-md;
+    @apply active:translate-y-0 active:bg-theme-primary-active active:shadow-none;
+    @apply disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply btn h-12 border border-theme-border bg-transparent px-6 text-theme-text-secondary;
+    @apply hover:border-theme-border-hover hover:bg-theme-surface-secondary;
+    @apply active:bg-theme-surface-secondary;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-text {
+    @apply btn px-0 py-2 text-body-sm text-theme-primary;
+    @apply hover:underline;
+    @apply active:text-theme-primary-active;
+  }
+
+  .btn-icon {
+    @apply btn h-10 w-10 text-theme-text-muted;
+    @apply hover:bg-theme-surface-secondary hover:text-theme-text-secondary;
+    @apply active:bg-theme-surface-secondary;
+  }
+
+  /* Input base styles */
+  .input {
+    @apply h-12 w-full rounded-md border border-theme-border bg-theme-surface-secondary px-4 text-theme-text;
+    @apply placeholder:text-theme-text-placeholder;
+    @apply hover:border-theme-border-hover;
+    @apply focus:border-theme-primary focus:ring-0;
+    @apply disabled:cursor-not-allowed disabled:opacity-70;
+  }
+
+  .input-error {
+    @apply border-theme-error;
+  }
+
+  /* Label styles */
+  .label {
+    @apply mb-2 block text-body-sm font-medium text-theme-text-secondary;
+  }
+
+  .label-required::after {
+    content: ' *';
+    @apply text-theme-primary;
+  }
+
+  /* Tag styles */
+  .tag {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-caption font-medium;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-cta bg-clip-text text-transparent;
+  }
+}

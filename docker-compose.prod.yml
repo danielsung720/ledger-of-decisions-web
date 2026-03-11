@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ledger-web
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - NUXT_PUBLIC_API_BASE=${API_BASE_URL:-http://localhost:8080/api}
+    networks:
+      - ledger-network
+
+networks:
+  ledger-network:
+    driver: bridge
