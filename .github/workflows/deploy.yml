@@ -11,6 +11,11 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
 jobs:
   ci-gate:
     name: Wait for CI
