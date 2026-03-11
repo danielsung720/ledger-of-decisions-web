@@ -9,6 +9,7 @@ import {
   MONTH_OPTIONS,
   INTENT_OPTIONS,
 } from '~/utils/constants'
+import type { ZodSchema } from 'zod'
 import { recurringExpenseFormSchema, type RecurringExpenseFormData } from '~/utils/validation'
 import { useFormValidation } from '~/composables/useFormValidation'
 
@@ -146,7 +147,10 @@ function handleSubmit() {
     note: formData.note || null,
   }
 
-  const isValid = validate(recurringExpenseFormSchema, dataToValidate)
+  const isValid = validate(
+    recurringExpenseFormSchema as ZodSchema<RecurringExpenseFormData>,
+    dataToValidate
+  )
 
   if (isValid) {
     emit('submit', dataToValidate as RecurringExpenseFormData)
@@ -302,7 +306,7 @@ watch(
 
     <!-- End Date -->
     <AppDatePicker
-      v-model="formData.end_date"
+      v-model="formData.end_date as string"
       label="結束日期（選填）"
       :error="getError('end_date')"
     />
