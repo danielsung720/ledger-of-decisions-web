@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import type { Income, CashFlowItem } from '~/types/cashflow'
 import { normalizeProjectionMonths } from '~/types/cashflow'
 import { useCashFlow } from '~/composables/useCashFlow'
+import { useRequestGate } from '~/composables/useRequestGate'
 
 interface UseCashFlowViewModelOptions {
   autoLoad?: boolean
@@ -13,6 +14,7 @@ interface UseCashFlowViewModelOptions {
  * Uses 100 to avoid unbounded list loads while keeping single-page UX simple.
  */
 const LIST_PAGE_SIZE = 100
+const CASHFLOW_STALE_WINDOW_MS = 90_000
 
 export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) {
   const {
@@ -30,6 +32,7 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
     confirmDeleteCashFlowItem,
     setSelectedMonths,
   } = useCashFlow()
+  const requestGate = useRequestGate()
 
   const localSelectedMonths = computed<number>({
     get() {
@@ -44,15 +47,29 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
     },
   })
 
-  async function loadData() {
+  async function loadData(force = false) {
     const normalizedMonths = normalizeProjectionMonths(localSelectedMonths.value)
     localSelectedMonths.value = normalizedMonths
-    await Promise.all([
-      fetchIncomes({ per_page: LIST_PAGE_SIZE }),
-      fetchCashFlowItems({ per_page: LIST_PAGE_SIZE }),
-      fetchSummary(),
-      fetchProjection(normalizedMonths),
-    ])
+    const requestKey = JSON.stringify({
+      page: 'cashflow',
+      months: normalizedMonths,
+      listPageSize: LIST_PAGE_SIZE,
+    })
+
+    await requestGate.run(
+      requestKey,
+      () =>
+        Promise.all([
+          fetchIncomes({ per_page: LIST_PAGE_SIZE }),
+          fetchCashFlowItems({ per_page: LIST_PAGE_SIZE }),
+          fetchSummary(),
+          fetchProjection(normalizedMonths),
+        ]).then(() => undefined),
+      {
+        staleWindowMs: CASHFLOW_STALE_WINDOW_MS,
+        force,
+      }
+    )
   }
 
   async function handleMonthChange(months: number) {
@@ -60,8 +77,8 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
     await fetchProjection(localSelectedMonths.value)
   }
 
-  function reloadDataWithErrorHandling(context: string) {
-    loadData().catch((error) => {
+  function reloadDataWithErrorHandling(context: string, force = false) {
+    loadData(force).catch((error) => {
       console.error(`[CashFlowViewModel] ${context}: reload data failed`, error)
     })
   }
@@ -107,7 +124,7 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
 
   function handleDeleteIncome(income: Income) {
     confirmDeleteIncome(income.id, () => {
-      reloadDataWithErrorHandling('after deleting income')
+      reloadDataWithErrorHandling('after deleting income', true)
     })
   }
 
@@ -116,7 +133,7 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
   }
 
   function handleIncomeModalSaved() {
-    reloadDataWithErrorHandling('after saving income modal')
+    reloadDataWithErrorHandling('after saving income modal', true)
   }
 
   function handleAddExpense() {
@@ -129,7 +146,7 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
 
   function handleDeleteExpense(item: CashFlowItem) {
     confirmDeleteCashFlowItem(item.id, () => {
-      reloadDataWithErrorHandling('after deleting expense')
+      reloadDataWithErrorHandling('after deleting expense', true)
     })
   }
 
@@ -138,7 +155,7 @@ export function useCashFlowViewModel(options: UseCashFlowViewModelOptions = {}) 
   }
 
   function handleExpenseModalSaved() {
-    reloadDataWithErrorHandling('after saving expense modal')
+    reloadDataWithErrorHandling('after saving expense modal', true)
   }
 
   if (options.autoLoad !== false) {
