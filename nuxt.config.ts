@@ -1,4 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const configuredApiBase = process.env.NUXT_PUBLIC_API_BASE
+const apiBase = configuredApiBase || '/api'
+
+const apiProxyTarget = process.env.NUXT_API_PROXY_TARGET || 'http://localhost:8080'
+const enableApiProxy = apiBase.startsWith('/')
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
@@ -21,19 +27,21 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     // Private: proxy target for server-side (not exposed to client)
-    apiProxyTarget: process.env.NUXT_API_PROXY_TARGET || 'http://localhost:8080',
+    apiProxyTarget,
     public: {
-      // Public: relative path for client-side (goes through proxy)
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api',
+      // Public API base used by the browser.
+      apiBase,
     },
   },
 
   nitro: {
-    routeRules: {
-      '/api/**': {
-        proxy: `${process.env.NUXT_API_PROXY_TARGET || 'http://localhost:8080'}/api/**`,
-      },
-    },
+    routeRules: enableApiProxy
+      ? {
+          '/api/**': {
+            proxy: `${apiProxyTarget}/api/**`,
+          },
+        }
+      : {},
   },
 
   app: {
