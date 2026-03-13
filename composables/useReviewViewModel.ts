@@ -1,5 +1,6 @@
 import type { DateRangePreset, ImpulseTrendViewModel, Insight } from '~/types'
 import { useDateRange } from '~/composables/useDateRange'
+import { useRequestGate } from '~/composables/useRequestGate'
 import { useReview } from '~/composables/useReview'
 import { buildReviewInsights } from '~/utils/review-insights'
 import type { Ref } from 'vue'
@@ -8,6 +9,8 @@ interface UseReviewViewModelOptions {
   expenseDataVersion?: Ref<number>
   autoLoad?: boolean
 }
+
+const REVIEW_STALE_WINDOW_MS = 60_000
 
 /**
  * Review page view model that orchestrates statistics loading and derived UI state.
@@ -18,10 +21,21 @@ export function useReviewViewModel(options: UseReviewViewModelOptions = {}) {
     useDateRange()
   const expenseDataVersion =
     options.expenseDataVersion ?? useState<number>('expense-data-version', () => 0)
+  const requestGate = useRequestGate()
 
-  async function loadData() {
+  async function loadData(force = false) {
+    const params = getApiParams()
+    const requestKey = JSON.stringify({
+      page: 'review',
+      version: expenseDataVersion.value,
+      params,
+    })
+
     try {
-      await fetchAll(getApiParams())
+      await requestGate.run(requestKey, () => fetchAll(params), {
+        staleWindowMs: REVIEW_STALE_WINDOW_MS,
+        force,
+      })
     } catch {
       // Error state is already handled in useReview.
     }
@@ -82,7 +96,7 @@ export function useReviewViewModel(options: UseReviewViewModelOptions = {}) {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       expenseDataVersion.value
       // Defer execution to avoid tracking date-range refs in this effect.
-      void Promise.resolve().then(() => loadData())
+      void Promise.resolve().then(() => loadData(true))
     })
   }
 

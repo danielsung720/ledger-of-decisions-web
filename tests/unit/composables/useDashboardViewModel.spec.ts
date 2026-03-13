@@ -33,16 +33,6 @@ vi.mock('~/stores/ui', () => ({
 }))
 
 describe('useDashboardViewModel', () => {
-  function createDeferred<T>() {
-    let resolve!: (value: T) => void
-    let reject!: (reason?: unknown) => void
-    const promise = new Promise<T>((res, rej) => {
-      resolve = res
-      reject = rej
-    })
-    return { promise, resolve, reject }
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
     getSummaryMock
@@ -198,72 +188,36 @@ describe('useDashboardViewModel', () => {
     expect(vm.isLoading.value).toBe(false)
   })
 
-  it('keeps latest dashboard result when concurrent loads resolve out of order', async () => {
+  it('deduplicates concurrent dashboard reloads with same query key', async () => {
     getSummaryMock.mockReset()
-
-    const firstToday = createDeferred<{
-      data: {
-        total_amount: number
-        total_count: number
-        impulse_spending_ratio: number
-        by_category: []
-        by_intent: []
-      }
-    }>()
-    const firstWeek = createDeferred<{
-      data: {
-        total_amount: number
-        total_count: number
-        impulse_spending_ratio: number
-        by_category: []
-        by_intent: []
-      }
-    }>()
-    const firstMonth = createDeferred<{
-      data: {
-        total_amount: number
-        total_count: number
-        impulse_spending_ratio: number
-        by_category: []
-        by_intent: []
-      }
-    }>()
-
-    const secondToday = createDeferred<{
-      data: {
-        total_amount: number
-        total_count: number
-        impulse_spending_ratio: number
-        by_category: []
-        by_intent: []
-      }
-    }>()
-    const secondWeek = createDeferred<{
-      data: {
-        total_amount: number
-        total_count: number
-        impulse_spending_ratio: number
-        by_category: []
-        by_intent: []
-      }
-    }>()
-    const secondMonth = createDeferred<{
-      data: {
-        total_amount: number
-        total_count: number
-        impulse_spending_ratio: number
-        by_category: []
-        by_intent: []
-      }
-    }>()
-
     getSummaryMock
-      .mockImplementationOnce(() => firstToday.promise)
-      .mockImplementationOnce(() => firstWeek.promise)
-      .mockImplementationOnce(() => firstMonth.promise)
-      .mockImplementationOnce(() => secondToday.promise)
-      .mockImplementationOnce(() => secondWeek.promise)
-      .mockImplementationOnce(() => secondMonth.promise)
+      .mockResolvedValueOnce({
+        data: {
+          total_amount: 101,
+          total_count: 1,
+          impulse_spending_ratio: 11,
+          by_category: [],
+          by_intent: [],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          total_amount: 202,
+          total_count: 2,
+          impulse_spending_ratio: 22,
+          by_category: [],
+          by_intent: [],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          total_amount: 303,
+          total_count: 3,
+          impulse_spending_ratio: 33,
+          by_category: [],
+          by_intent: [],
+        },
+      })
 
     const { useDashboardViewModel } = await import('~/composables/useDashboardViewModel')
     const vm = useDashboardViewModel({
@@ -276,66 +230,9 @@ describe('useDashboardViewModel', () => {
     const firstLoad = vm.loadDashboardData()
     const secondLoad = vm.loadDashboardData()
 
-    secondToday.resolve({
-      data: {
-        total_amount: 101,
-        total_count: 1,
-        impulse_spending_ratio: 11,
-        by_category: [],
-        by_intent: [],
-      },
-    })
-    secondWeek.resolve({
-      data: {
-        total_amount: 202,
-        total_count: 2,
-        impulse_spending_ratio: 22,
-        by_category: [],
-        by_intent: [],
-      },
-    })
-    secondMonth.resolve({
-      data: {
-        total_amount: 303,
-        total_count: 3,
-        impulse_spending_ratio: 33,
-        by_category: [],
-        by_intent: [],
-      },
-    })
+    await Promise.all([firstLoad, secondLoad])
 
-    await secondLoad
-
-    firstToday.resolve({
-      data: {
-        total_amount: 999,
-        total_count: 9,
-        impulse_spending_ratio: 99,
-        by_category: [],
-        by_intent: [],
-      },
-    })
-    firstWeek.resolve({
-      data: {
-        total_amount: 999,
-        total_count: 9,
-        impulse_spending_ratio: 99,
-        by_category: [],
-        by_intent: [],
-      },
-    })
-    firstMonth.resolve({
-      data: {
-        total_amount: 999,
-        total_count: 9,
-        impulse_spending_ratio: 99,
-        by_category: [],
-        by_intent: [],
-      },
-    })
-
-    await firstLoad
-
+    expect(getSummaryMock).toHaveBeenCalledTimes(3)
     expect(vm.todayAmount.value).toBe(101)
     expect(vm.weekAmount.value).toBe(202)
     expect(vm.totalAmount.value).toBe(303)

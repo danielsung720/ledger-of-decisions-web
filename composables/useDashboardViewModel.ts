@@ -1,5 +1,6 @@
 import type { ApiResponse, SummaryStats } from '~/types'
 import { useExpenses } from '~/composables/useExpenses'
+import { useRequestGate } from '~/composables/useRequestGate'
 import { useApiClient } from '~/utils/api'
 import { useUiStore } from '~/stores/ui'
 import type { Ref } from 'vue'
@@ -18,6 +19,8 @@ interface UseDashboardViewModelOptions {
   autoLoad?: boolean
 }
 
+const DASHBOARD_STALE_WINDOW_MS = 45_000
+
 /**
  * Dashboard page view model that aggregates summary cards, recent expenses, and actions.
  */
@@ -28,36 +31,40 @@ export function useDashboardViewModel(options: UseDashboardViewModelOptions = {}
   const { expenses, loading: expensesLoading, fetchExpenses } = useExpenses()
   const expenseDataVersion =
     options.expenseDataVersion ?? useState<number>('expense-data-version', () => 0)
+  const requestGate = useRequestGate()
 
   const todaySummary = ref<SummaryStats | null>(null)
   const weekSummary = ref<SummaryStats | null>(null)
   const monthSummary = ref<SummaryStats | null>(null)
   const summaryLoading = ref(false)
-  let latestLoadId = 0
 
-  async function loadDashboardData() {
-    const loadId = ++latestLoadId
-    summaryLoading.value = true
-    try {
-      const [_expenses, todayRes, weekRes, monthRes] = await Promise.all([
-        fetchExpenses({ preset: 'this_month', per_page: 5 }),
-        api.getSummary({ preset: 'today' }),
-        api.getSummary({ preset: 'this_week' }),
-        api.getSummary({ preset: 'this_month' }),
-      ])
+  async function loadDashboardData(force = false) {
+    const requestKey = `dashboard:v${expenseDataVersion.value}`
 
-      if (loadId !== latestLoadId) {
-        return
+    await requestGate.run(
+      requestKey,
+      async () => {
+        summaryLoading.value = true
+        try {
+          const [_expenses, todayRes, weekRes, monthRes] = await Promise.all([
+            fetchExpenses({ preset: 'this_month', per_page: 5 }),
+            api.getSummary({ preset: 'today' }),
+            api.getSummary({ preset: 'this_week' }),
+            api.getSummary({ preset: 'this_month' }),
+          ])
+
+          todaySummary.value = todayRes.data
+          weekSummary.value = weekRes.data
+          monthSummary.value = monthRes.data
+        } finally {
+          summaryLoading.value = false
+        }
+      },
+      {
+        staleWindowMs: DASHBOARD_STALE_WINDOW_MS,
+        force,
       }
-
-      todaySummary.value = todayRes.data
-      weekSummary.value = weekRes.data
-      monthSummary.value = monthRes.data
-    } finally {
-      if (loadId === latestLoadId) {
-        summaryLoading.value = false
-      }
-    }
+    )
   }
 
   function handleAddExpense() {
@@ -84,7 +91,7 @@ export function useDashboardViewModel(options: UseDashboardViewModelOptions = {}
     })
 
     watch(expenseDataVersion, () => {
-      loadDashboardData()
+      loadDashboardData(true)
     })
   }
 
