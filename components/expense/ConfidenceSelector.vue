@@ -48,7 +48,7 @@ function getButtonClasses(confidence: (typeof CONFIDENCE_OPTIONS)[number]) {
   <div class="w-full">
     <label class="label"> 這筆消費滿意嗎？（選填） </label>
 
-    <div class="flex flex-wrap gap-3">
+    <div class="flex flex-wrap justify-center gap-3">
       <button
         v-for="confidence in CONFIDENCE_OPTIONS"
         :key="confidence.value"

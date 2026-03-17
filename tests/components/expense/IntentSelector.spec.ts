@@ -98,6 +98,8 @@ describe('IntentSelector', () => {
 
       const buttons = wrapper.findAll('button')
       expect(buttons[0].classes()).toContain('border-2')
+      expect(buttons[0].classes()).toContain('ring-2')
+      expect(buttons[0].classes()).toContain('shadow-sm')
     })
 
     it('shows selected state for impulse', () => {
@@ -120,6 +122,8 @@ describe('IntentSelector', () => {
       // Other buttons should not have border-2
       expect(buttons[1].classes()).not.toContain('border-2')
       expect(buttons[2].classes()).not.toContain('border-2')
+      expect(buttons[1].classes()).not.toContain('ring-2')
+      expect(buttons[2].classes()).not.toContain('ring-2')
     })
   })
 
@@ -155,6 +159,17 @@ describe('IntentSelector', () => {
       buttons.forEach((button) => {
         expect(button.attributes('type')).toBe('button')
       })
+    })
+  })
+
+  describe('layout', () => {
+    it('centers the intent button group horizontally', () => {
+      const wrapper = mount(IntentSelector, {
+        props: { modelValue: null },
+        global,
+      })
+
+      expect(wrapper.find('.flex.flex-wrap').classes()).toContain('justify-center')
     })
   })
 })

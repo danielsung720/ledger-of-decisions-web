@@ -193,5 +193,14 @@ describe('ConfidenceSelector', () => {
         expect(button.classes()).toContain('rounded-full')
       })
     })
+
+    it('centers the confidence button group horizontally', () => {
+      const wrapper = mount(ConfidenceSelector, {
+        props: { modelValue: null },
+        global,
+      })
+
+      expect(wrapper.find('.flex.flex-wrap').classes()).toContain('justify-center')
+    })
   })
 })
