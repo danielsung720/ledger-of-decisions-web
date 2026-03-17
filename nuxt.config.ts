@@ -6,6 +6,7 @@ const apiProxyTarget = process.env.NUXT_API_PROXY_TARGET || 'http://localhost:80
 const enableApiProxy = apiBase.startsWith('/')
 const canonicalOrigin =
   process.env.NUXT_CANONICAL_ORIGIN || process.env.NUXT_PUBLIC_CANONICAL_ORIGIN || ''
+const serverCookieForwardDomains = process.env.NUXT_SERVER_COOKIE_FORWARD_DOMAINS || ''
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
@@ -30,6 +31,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private: proxy target for server-side (not exposed to client)
     apiProxyTarget,
+    // Private: allow SSR to forward cookies between trusted sibling domains.
+    serverCookieForwardDomains,
     // Optional: force all requests to a single public origin in production.
     canonicalOrigin,
     public: {

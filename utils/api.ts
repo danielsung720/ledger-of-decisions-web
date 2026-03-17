@@ -72,12 +72,16 @@ interface ApiRequestOptions {
 
 class ApiClient {
   private baseUrl: string
+  private serverCookieForwardDomains: string[]
   private csrfBootstrapPromise: Promise<void> | null = null
   private csrfBootstrapped = false
 
   constructor() {
     const config = useRuntimeConfig()
     this.baseUrl = config.public.apiBase as string
+    this.serverCookieForwardDomains = this.parseForwardDomainAllowlist(
+      config.serverCookieForwardDomains as string | undefined
+    )
   }
 
   private async request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -170,10 +174,43 @@ class ApiClient {
     if (!requestHost) return false
 
     try {
-      return new URL(this.baseUrl).host === requestHost
+      const apiHostname = this.toHostname(new URL(this.baseUrl).host)
+      const requestHostname = this.toHostname(requestHost)
+
+      if (!apiHostname || !requestHostname) return false
+      if (apiHostname === requestHostname) return true
+
+      if (!this.serverCookieForwardDomains.length) return false
+
+      return (
+        this.isHostAllowedForForward(requestHostname) && this.isHostAllowedForForward(apiHostname)
+      )
     } catch {
       return false
     }
+  }
+
+  private parseForwardDomainAllowlist(domains: string | undefined): string[] {
+    if (!domains) return []
+
+    return domains
+      .split(',')
+      .map((domain) => domain.trim().toLowerCase().replace(/^\./, ''))
+      .filter(Boolean)
+  }
+
+  private toHostname(hostOrDomain: string): string | null {
+    const normalized = hostOrDomain.trim().toLowerCase()
+    if (!normalized) return null
+
+    const hostWithoutPort = normalized.includes(':') ? normalized.split(':')[0] : normalized
+    return hostWithoutPort || null
+  }
+
+  private isHostAllowedForForward(hostname: string): boolean {
+    return this.serverCookieForwardDomains.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+    )
   }
 
   private async ensureCsrfCookie(): Promise<void> {
