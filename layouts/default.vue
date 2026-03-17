@@ -29,10 +29,9 @@ provide('expenseModal', {
   close: closeExpenseModal,
 })
 
-// Initialize auth state on app load
-onMounted(async () => {
+if (!authStore.initialized) {
   await authStore.initialize()
-})
+}
 </script>
 
 <template>

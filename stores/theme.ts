@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { useApiClient, getStoredToken } from '~/utils/api'
+import { useApiClient } from '~/utils/api'
+import { useAuthStore } from '~/stores/auth'
 import type { ThemeId } from '~/types/preferences'
 
 export type { ThemeId }
@@ -32,7 +33,8 @@ export const useThemeStore = defineStore('theme', {
      * Check if user is authenticated
      */
     isAuthenticated(): boolean {
-      return !!getStoredToken()
+      const authStore = useAuthStore()
+      return authStore.isAuthenticated
     },
 
     /**
@@ -83,6 +85,8 @@ export const useThemeStore = defineStore('theme', {
         const api = useApiClient()
         await api.updateUserPreferences({ ui_theme: theme })
         this.isSynced = true
+        // Keep local cache aligned to avoid default-theme flash on next app entry.
+        this.persistTheme(theme)
       } catch {
         // Silently fail - theme is already applied to UI
         // Also persist to localStorage as backup

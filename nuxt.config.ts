@@ -40,6 +40,9 @@ export default defineNuxtConfig({
           '/api/**': {
             proxy: `${apiProxyTarget}/api/**`,
           },
+          '/sanctum/**': {
+            proxy: `${apiProxyTarget}/sanctum/**`,
+          },
         }
       : {},
   },

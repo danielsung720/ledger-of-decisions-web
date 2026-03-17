@@ -1,4 +1,4 @@
-import { useThemeStore } from '~/stores/theme'
+import { useThemeStore, type ThemeId } from '~/stores/theme'
 
 export default defineNuxtPlugin(() => {
   // Add preload class to prevent transition flash
@@ -11,6 +11,7 @@ export default defineNuxtPlugin(() => {
   // Keep cookie in sync with store so SSR always renders the correct data-theme on next request
   const themeCookie = useCookie<string>('ui-theme', {
     maxAge: 60 * 60 * 24 * 365,
+    path: '/',
   })
   watch(
     () => themeStore.current,
@@ -19,8 +20,16 @@ export default defineNuxtPlugin(() => {
     }
   )
 
-  // Step 1: Immediately apply theme from localStorage (prevents flash)
-  themeStore.initializeFromLocalStorage()
+  // Step 1: Keep first client paint aligned with SSR cookie to avoid hydration flash.
+  const cookieTheme = themeCookie.value
+  if (themeStore.isValidTheme(cookieTheme)) {
+    themeStore.applyTheme(cookieTheme as ThemeId)
+    themeStore.current = cookieTheme as ThemeId
+    themeStore.persistTheme(cookieTheme as ThemeId)
+  } else {
+    // Fallback for users without cookie yet.
+    themeStore.initializeFromLocalStorage()
+  }
 
   // Step 2: Async sync with API if authenticated
   // This runs after initial render, so won't cause flash

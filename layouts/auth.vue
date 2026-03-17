@@ -5,11 +5,9 @@ import { useAuthStore } from '~/stores/auth'
 const uiStore = useUiStore()
 const authStore = useAuthStore()
 
-onMounted(async () => {
-  if (!authStore.initialized) {
-    await authStore.initialize()
-  }
-})
+if (!authStore.initialized) {
+  await authStore.initialize()
+}
 </script>
 
 <template>

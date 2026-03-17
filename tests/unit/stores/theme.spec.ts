@@ -2,21 +2,23 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useThemeStore } from '~/stores/theme'
 
-// Get the mocked function for manipulation
-import { getStoredToken } from '~/utils/api'
-
 // Mock the API client
 const mockGetUserPreferences = vi.fn()
 const mockUpdateUserPreferences = vi.fn()
+const authState = {
+  isAuthenticated: false,
+}
 
 vi.mock('~/utils/api', () => ({
-  getStoredToken: vi.fn(() => null),
   useApiClient: () => ({
     getUserPreferences: mockGetUserPreferences,
     updateUserPreferences: mockUpdateUserPreferences,
   }),
 }))
-const mockedGetStoredToken = vi.mocked(getStoredToken)
+
+vi.mock('~/stores/auth', () => ({
+  useAuthStore: () => authState,
+}))
 
 describe('useThemeStore', () => {
   beforeEach(() => {
@@ -25,7 +27,7 @@ describe('useThemeStore', () => {
     vi.spyOn(document.documentElement, 'setAttribute').mockImplementation(vi.fn())
     mockGetUserPreferences.mockReset()
     mockUpdateUserPreferences.mockReset()
-    mockedGetStoredToken.mockReturnValue(null)
+    authState.isAuthenticated = false
   })
 
   afterEach(() => {
@@ -111,7 +113,7 @@ describe('useThemeStore', () => {
 
   describe('setTheme (authenticated)', () => {
     beforeEach(() => {
-      mockedGetStoredToken.mockReturnValue('test-token')
+      authState.isAuthenticated = true
     })
 
     it('calls API to save theme when authenticated', async () => {
@@ -122,6 +124,7 @@ describe('useThemeStore', () => {
 
       expect(mockUpdateUserPreferences).toHaveBeenCalledWith({ ui_theme: 'code' })
       expect(store.isSynced).toBe(true)
+      expect(localStorage.getItem('ui-theme')).toBe('code')
     })
 
     it('falls back to localStorage on API error', async () => {
@@ -167,7 +170,7 @@ describe('useThemeStore', () => {
 
   describe('initializeTheme (with API)', () => {
     beforeEach(() => {
-      mockedGetStoredToken.mockReturnValue('test-token')
+      authState.isAuthenticated = true
     })
 
     it('fetches theme from API when authenticated', async () => {
@@ -209,7 +212,7 @@ describe('useThemeStore', () => {
 
   describe('syncAfterLogin', () => {
     beforeEach(() => {
-      mockedGetStoredToken.mockReturnValue('test-token')
+      authState.isAuthenticated = true
     })
 
     it('fetches and applies theme from API', async () => {
@@ -285,15 +288,15 @@ describe('useThemeStore', () => {
   })
 
   describe('isAuthenticated', () => {
-    it('returns false when no token', () => {
-      mockedGetStoredToken.mockReturnValue(null)
+    it('returns false when user is not authenticated', () => {
+      authState.isAuthenticated = false
       const store = useThemeStore()
 
       expect(store.isAuthenticated()).toBe(false)
     })
 
-    it('returns true when token exists', () => {
-      mockedGetStoredToken.mockReturnValue('test-token')
+    it('returns true when user is authenticated', () => {
+      authState.isAuthenticated = true
       const store = useThemeStore()
 
       expect(store.isAuthenticated()).toBe(true)

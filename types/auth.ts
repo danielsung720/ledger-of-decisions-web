@@ -14,7 +14,6 @@ export interface User {
 /** Auth state */
 export interface AuthState {
   user: User | null
-  token: string | null
   isAuthenticated: boolean
   isLoading: boolean
 }
@@ -69,8 +68,6 @@ export interface AuthResponse {
   success: boolean
   data: {
     user: User
-    token: string
-    token_type: string
   }
   message?: string
 }
@@ -78,19 +75,13 @@ export interface AuthResponse {
 export interface RegisterResponse {
   success: boolean
   message: string
-  data: {
-    email: string
-  }
+  data: User
 }
 
 export interface VerifyEmailResponse {
   success: boolean
   message: string
-  data: {
-    user: User
-    token: string
-    token_type: string
-  }
+  data: User
 }
 
 export interface ResendVerificationResponse {
