@@ -50,25 +50,11 @@ import type {
 import type { UserPreferences, UpdateUserPreferencesRequest } from '~/types/preferences'
 
 // ============================================================
-// Token Management
+// CSRF Helpers
 // ============================================================
 
-const TOKEN_KEY = 'auth_token'
-
-export function getStoredToken(): string | null {
-  if (import.meta.server) return null
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-export function setStoredToken(token: string): void {
-  if (import.meta.server) return
-  localStorage.setItem(TOKEN_KEY, token)
-}
-
-export function removeStoredToken(): void {
-  if (import.meta.server) return
-  localStorage.removeItem(TOKEN_KEY)
-}
+const XSRF_COOKIE_KEY = 'XSRF-TOKEN'
+const XSRF_HEADER_KEY = 'X-XSRF-TOKEN'
 
 // ============================================================
 // API Client
@@ -81,10 +67,13 @@ interface ApiRequestOptions {
   body?: string
   headers?: Record<string, string>
   skipAuth?: boolean
+  skipCsrf?: boolean
 }
 
 class ApiClient {
   private baseUrl: string
+  private csrfBootstrapPromise: Promise<void> | null = null
+  private csrfBootstrapped = false
 
   constructor() {
     const config = useRuntimeConfig()
@@ -93,47 +82,122 @@ class ApiClient {
 
   private async request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
+    const method = options.method ?? 'GET'
+    const requestFetch = import.meta.server ? useRequestFetch() : $fetch
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    const headers: Record<string, string> = { ...options.headers }
+
+    if (options.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json'
     }
 
-    // Add Authorization header if token exists and not skipped
-    if (!options.skipAuth) {
-      const token = getStoredToken()
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+    if (import.meta.server) {
+      const requestHeaders = useRequestHeaders(['cookie', 'host', 'x-forwarded-proto'])
+      const cookieHeader = requestHeaders.cookie
+      const shouldForwardCookies = this.shouldForwardServerCookies(requestHeaders.host)
+      const requestProtocol = requestHeaders['x-forwarded-proto']?.split(',')[0]?.trim() || 'http'
+      const requestOrigin = requestHeaders.host
+        ? `${requestProtocol}://${requestHeaders.host}`
+        : null
+
+      if (cookieHeader && shouldForwardCookies) {
+        headers.cookie = cookieHeader
+      }
+
+      if (requestOrigin && shouldForwardCookies) {
+        headers.origin = requestOrigin
+        headers.referer = `${requestOrigin}/`
+      }
+
+      if (
+        !options.skipCsrf &&
+        this.isUnsafeMethod(method) &&
+        cookieHeader &&
+        shouldForwardCookies
+      ) {
+        const xsrfToken = this.getCookieValue(cookieHeader, XSRF_COOKIE_KEY)
+        if (xsrfToken) {
+          headers[XSRF_HEADER_KEY] = decodeURIComponent(xsrfToken)
+        }
+      }
+    } else if (!options.skipCsrf && this.isUnsafeMethod(method)) {
+      await this.ensureCsrfCookie()
+
+      const xsrfToken = this.getCookieValue(document.cookie, XSRF_COOKIE_KEY)
+      if (xsrfToken) {
+        headers[XSRF_HEADER_KEY] = decodeURIComponent(xsrfToken)
       }
     }
 
     const fetchOptions: Parameters<typeof $fetch>[1] = {
+      method,
       headers,
-    }
-
-    if (options.method) {
-      fetchOptions.method = options.method
+      credentials: 'include',
     }
 
     if (options.body) {
       fetchOptions.body = options.body
     }
 
+    return await requestFetch<T>(url, fetchOptions)
+  }
+
+  private isUnsafeMethod(method: HttpMethod): boolean {
+    return method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
+  }
+
+  private getCookieValue(cookieSource: string | undefined, key: string): string | null {
+    if (!cookieSource) return null
+    const prefix = `${key}=`
+    const entry = cookieSource
+      .split(';')
+      .map((segment) => segment.trim())
+      .find((segment) => segment.startsWith(prefix))
+
+    return entry ? entry.slice(prefix.length) : null
+  }
+
+  private getCsrfEndpoint(): string {
+    if (this.baseUrl.startsWith('http://') || this.baseUrl.startsWith('https://')) {
+      return new URL('/sanctum/csrf-cookie', this.baseUrl).toString()
+    }
+    return '/sanctum/csrf-cookie'
+  }
+
+  private shouldForwardServerCookies(requestHost?: string): boolean {
+    if (this.baseUrl.startsWith('/')) return true
+
+    if (!requestHost) return false
+
     try {
-      return await $fetch<T>(url, fetchOptions)
-    } catch (error: unknown) {
-      // Handle 401 Unauthorized - clear token and redirect to login
-      if (error && typeof error === 'object' && 'statusCode' in error) {
-        const statusCode = (error as { statusCode: number }).statusCode
-        if (statusCode === 401) {
-          removeStoredToken()
-          if (!import.meta.server) {
-            const router = useRouter()
-            router.push('/login')
-          }
-        }
-      }
-      throw error
+      return new URL(this.baseUrl).host === requestHost
+    } catch {
+      return false
+    }
+  }
+
+  private async ensureCsrfCookie(): Promise<void> {
+    if (import.meta.server || this.csrfBootstrapped) return
+
+    if (this.getCookieValue(document.cookie, XSRF_COOKIE_KEY)) {
+      this.csrfBootstrapped = true
+      return
+    }
+
+    if (this.csrfBootstrapPromise) {
+      await this.csrfBootstrapPromise
+      return
+    }
+
+    this.csrfBootstrapPromise = (async () => {
+      await $fetch(this.getCsrfEndpoint(), { credentials: 'include' })
+      this.csrfBootstrapped = true
+    })()
+
+    try {
+      await this.csrfBootstrapPromise
+    } finally {
+      this.csrfBootstrapPromise = null
     }
   }
 

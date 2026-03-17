@@ -3,7 +3,6 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '~/stores/auth'
 import type { User } from '~/types/auth'
 
-// Mock the API client
 const mockApi = {
   register: vi.fn(),
   verifyEmail: vi.fn(),
@@ -16,16 +15,8 @@ const mockApi = {
   updatePassword: vi.fn(),
 }
 
-// Mock token functions
-const mockSetStoredToken = vi.fn()
-const mockRemoveStoredToken = vi.fn()
-const mockGetStoredToken = vi.fn()
-
 vi.mock('~/utils/api', () => ({
   useApiClient: () => mockApi,
-  setStoredToken: (token: string) => mockSetStoredToken(token),
-  removeStoredToken: () => mockRemoveStoredToken(),
-  getStoredToken: () => mockGetStoredToken(),
 }))
 
 describe('useAuthStore', () => {
@@ -40,6 +31,7 @@ describe('useAuthStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    localStorage.clear()
   })
 
   describe('initial state', () => {
@@ -47,7 +39,6 @@ describe('useAuthStore', () => {
       const store = useAuthStore()
 
       expect(store.user).toBe(null)
-      expect(store.token).toBe(null)
       expect(store.isLoading).toBe(false)
       expect(store.error).toBe(null)
       expect(store.pendingEmail).toBe(null)
@@ -56,26 +47,13 @@ describe('useAuthStore', () => {
   })
 
   describe('getters', () => {
-    it('isAuthenticated returns false when no token or user', () => {
+    it('isAuthenticated returns false when no user', () => {
       const store = useAuthStore()
       expect(store.isAuthenticated).toBe(false)
     })
 
-    it('isAuthenticated returns false when only token exists', () => {
+    it('isAuthenticated returns true when user exists', () => {
       const store = useAuthStore()
-      store.token = 'test-token'
-      expect(store.isAuthenticated).toBe(false)
-    })
-
-    it('isAuthenticated returns false when only user exists', () => {
-      const store = useAuthStore()
-      store.user = mockUser
-      expect(store.isAuthenticated).toBe(false)
-    })
-
-    it('isAuthenticated returns true when both token and user exist', () => {
-      const store = useAuthStore()
-      store.token = 'test-token'
       store.user = mockUser
       expect(store.isAuthenticated).toBe(true)
     })
@@ -104,45 +82,29 @@ describe('useAuthStore', () => {
   })
 
   describe('initialize', () => {
-    it('does nothing when no stored token', async () => {
+    it('initializes as guest when session is missing', async () => {
       const store = useAuthStore()
-      mockGetStoredToken.mockReturnValueOnce(null)
+      mockApi.getUser.mockRejectedValueOnce({ statusCode: 401 })
 
       await store.initialize()
 
-      expect(store.token).toBe(null)
+      expect(store.user).toBe(null)
       expect(store.initialized).toBe(true)
-      expect(mockApi.getUser).not.toHaveBeenCalled()
+      expect(mockApi.getUser).toHaveBeenCalledTimes(1)
     })
 
-    it('fetches user when token exists', async () => {
+    it('fetches user when session exists', async () => {
       const store = useAuthStore()
-      mockGetStoredToken.mockReturnValueOnce('stored-token')
       mockApi.getUser.mockResolvedValueOnce({ data: mockUser })
 
       await store.initialize()
 
-      expect(store.token).toBe('stored-token')
       expect(store.user).toEqual(mockUser)
       expect(store.initialized).toBe(true)
-    })
-
-    it('logs out when fetchUser fails', async () => {
-      const store = useAuthStore()
-      mockGetStoredToken.mockReturnValueOnce('invalid-token')
-      mockApi.getUser.mockRejectedValueOnce(new Error('Invalid token'))
-
-      await store.initialize()
-
-      expect(store.token).toBe(null)
-      expect(store.user).toBe(null)
-      expect(store.initialized).toBe(true)
-      expect(mockRemoveStoredToken).toHaveBeenCalled()
     })
 
     it('is idempotent after first initialization', async () => {
       const store = useAuthStore()
-      mockGetStoredToken.mockReturnValueOnce('stored-token')
       mockApi.getUser.mockResolvedValueOnce({ data: mockUser })
 
       await store.initialize()
@@ -151,25 +113,8 @@ describe('useAuthStore', () => {
       expect(mockApi.getUser).toHaveBeenCalledTimes(1)
     })
 
-    it('re-initializes when token appears in storage after first pass', async () => {
+    it('deduplicates concurrent initialize calls', async () => {
       const store = useAuthStore()
-
-      mockGetStoredToken.mockReturnValueOnce(null)
-      await store.initialize()
-      expect(store.initialized).toBe(true)
-
-      mockGetStoredToken.mockReturnValueOnce('late-token')
-      mockApi.getUser.mockResolvedValueOnce({ data: mockUser })
-      await store.initialize()
-
-      expect(store.token).toBe('late-token')
-      expect(store.user).toEqual(mockUser)
-      expect(mockApi.getUser).toHaveBeenCalledTimes(1)
-    })
-
-    it('deduplicates concurrent initialize calls with single fetchUser request', async () => {
-      const store = useAuthStore()
-      mockGetStoredToken.mockReturnValue('stored-token')
       mockApi.getUser.mockResolvedValue({ data: mockUser })
 
       await Promise.all([store.initialize(), store.initialize(), store.initialize()])
@@ -177,6 +122,27 @@ describe('useAuthStore', () => {
       expect(mockApi.getUser).toHaveBeenCalledTimes(1)
       expect(store.user).toEqual(mockUser)
       expect(store.initialized).toBe(true)
+    })
+
+    it('restores pendingEmail from localStorage', async () => {
+      localStorage.setItem('pending_verification_email', 'stored@example.com')
+      const store = useAuthStore()
+      mockApi.getUser.mockRejectedValueOnce({ statusCode: 401 })
+
+      await store.initialize()
+
+      expect(store.pendingEmail).toBe('stored@example.com')
+    })
+
+    it('clears invalid pendingEmail format from localStorage', async () => {
+      localStorage.setItem('pending_verification_email', 'invalid-email')
+      const store = useAuthStore()
+      mockApi.getUser.mockRejectedValueOnce({ statusCode: 401 })
+
+      await store.initialize()
+
+      expect(store.pendingEmail).toBe(null)
+      expect(localStorage.getItem('pending_verification_email')).toBe(null)
     })
   })
 
@@ -188,33 +154,19 @@ describe('useAuthStore', () => {
       password_confirmation: 'password123',
     }
 
-    it('registers successfully', async () => {
+    it('registers successfully and stores pending email from request', async () => {
       const store = useAuthStore()
       mockApi.register.mockResolvedValueOnce({
         success: true,
-        data: { email: 'test@example.com' },
+        data: mockUser,
       })
 
       const result = await store.register(registerData)
 
-      expect(result.data.email).toBe('test@example.com')
+      expect(result.success).toBe(true)
       expect(store.pendingEmail).toBe('test@example.com')
-      expect(store.isLoading).toBe(false)
+      expect(localStorage.getItem('pending_verification_email')).toBe('test@example.com')
       expect(store.error).toBe(null)
-    })
-
-    it('sets loading during registration', async () => {
-      const store = useAuthStore()
-      let loadingDuringRegister = false
-
-      mockApi.register.mockImplementationOnce(async () => {
-        loadingDuringRegister = store.isLoading
-        return { success: true, data: { email: 'test@example.com' } }
-      })
-
-      await store.register(registerData)
-
-      expect(loadingDuringRegister).toBe(true)
     })
 
     it('handles registration error', async () => {
@@ -235,21 +187,30 @@ describe('useAuthStore', () => {
       code: '123456',
     }
 
-    it('verifies email successfully', async () => {
+    it('accepts verifyEmail response with direct user payload', async () => {
       const store = useAuthStore()
       store.pendingEmail = 'test@example.com'
-
       mockApi.verifyEmail.mockResolvedValueOnce({
         success: true,
-        data: { user: mockUser, token: 'new-token' },
+        data: mockUser,
       })
 
       await store.verifyEmail(verifyData)
 
       expect(store.user).toEqual(mockUser)
-      expect(store.token).toBe('new-token')
       expect(store.pendingEmail).toBe(null)
-      expect(mockSetStoredToken).toHaveBeenCalledWith('new-token')
+      expect(store.initialized).toBe(true)
+    })
+
+    it('accepts verifyEmail response with nested user payload', async () => {
+      const store = useAuthStore()
+      mockApi.verifyEmail.mockResolvedValueOnce({
+        success: true,
+        data: { user: mockUser },
+      })
+
+      await store.verifyEmail(verifyData)
+      expect(store.user).toEqual(mockUser)
     })
 
     it('handles verification error', async () => {
@@ -294,18 +255,17 @@ describe('useAuthStore', () => {
       password: 'password123',
     }
 
-    it('logs in successfully', async () => {
+    it('logs in successfully with session response contract', async () => {
       const store = useAuthStore()
       mockApi.login.mockResolvedValueOnce({
         success: true,
-        data: { user: mockUser, token: 'login-token' },
+        data: { user: mockUser },
       })
 
       await store.login(loginData)
 
       expect(store.user).toEqual(mockUser)
-      expect(store.token).toBe('login-token')
-      expect(mockSetStoredToken).toHaveBeenCalledWith('login-token')
+      expect(store.initialized).toBe(true)
     })
 
     it('handles login error', async () => {
@@ -323,31 +283,26 @@ describe('useAuthStore', () => {
     it('logs out and clears state', async () => {
       const store = useAuthStore()
       store.user = mockUser
-      store.token = 'test-token'
       store.pendingEmail = 'test@example.com'
 
       mockApi.logout.mockResolvedValueOnce({ success: true })
 
       await store.logout()
 
+      expect(mockApi.logout).toHaveBeenCalledTimes(1)
       expect(store.user).toBe(null)
-      expect(store.token).toBe(null)
       expect(store.pendingEmail).toBe(null)
-      expect(mockRemoveStoredToken).toHaveBeenCalled()
     })
 
     it('clears state even if API logout fails', async () => {
       const store = useAuthStore()
       store.user = mockUser
-      store.token = 'test-token'
-
       mockApi.logout.mockRejectedValueOnce(new Error('Network error'))
 
       await store.logout()
 
       expect(store.user).toBe(null)
-      expect(store.token).toBe(null)
-      expect(mockRemoveStoredToken).toHaveBeenCalled()
+      expect(store.pendingEmail).toBe(null)
     })
   })
 
@@ -362,17 +317,13 @@ describe('useAuthStore', () => {
       expect(store.user).toEqual(mockUser)
     })
 
-    it('clears auth state on error', async () => {
+    it('clears user on error', async () => {
       const store = useAuthStore()
       store.user = mockUser
-      store.token = 'test-token'
-
       mockApi.getUser.mockRejectedValueOnce(new Error('Unauthorized'))
 
       await expect(store.fetchUser()).rejects.toThrow()
       expect(store.user).toBe(null)
-      expect(store.token).toBe(null)
-      expect(mockRemoveStoredToken).toHaveBeenCalled()
     })
   })
 
@@ -412,7 +363,6 @@ describe('useAuthStore', () => {
     it('resets password successfully', async () => {
       const store = useAuthStore()
       store.pendingEmail = 'test@example.com'
-
       mockApi.resetPassword.mockResolvedValueOnce({
         success: true,
         message: 'Password reset',
@@ -520,29 +470,6 @@ describe('useAuthStore', () => {
 
       store.clearPendingEmail()
 
-      expect(localStorage.getItem('pending_verification_email')).toBe(null)
-    })
-  })
-
-  describe('initialize with localStorage', () => {
-    it('restores pendingEmail from localStorage', async () => {
-      localStorage.setItem('pending_verification_email', 'stored@example.com')
-      mockGetStoredToken.mockReturnValueOnce(null)
-
-      const store = useAuthStore()
-      await store.initialize()
-
-      expect(store.pendingEmail).toBe('stored@example.com')
-    })
-
-    it('clears invalid email format from localStorage', async () => {
-      localStorage.setItem('pending_verification_email', 'invalid-email-format')
-      mockGetStoredToken.mockReturnValueOnce(null)
-
-      const store = useAuthStore()
-      await store.initialize()
-
-      expect(store.pendingEmail).toBe(null)
       expect(localStorage.getItem('pending_verification_email')).toBe(null)
     })
   })

@@ -4,56 +4,41 @@ import { ApiClient } from '~/utils/api'
 describe('ApiClient auth endpoint contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorage.clear()
+    document.cookie = ''
   })
 
-  it('uses skipAuth endpoints without Authorization header', async () => {
-    localStorage.setItem('auth_token', 'token-should-not-be-sent')
+  it('bootstraps csrf cookie for unsafe auth requests', async () => {
     const fetchMock = vi.mocked(globalThis.$fetch)
-    fetchMock
-      .mockResolvedValueOnce({ success: true, data: { email: 'user@example.com' } })
-      .mockResolvedValueOnce({ success: true, data: { user: { id: 1 }, token: 't' } })
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true, data: { user: { id: 1 }, token: 't' } })
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true })
+    fetchMock.mockResolvedValue({ success: true } as never)
 
     const api = Object.create(ApiClient.prototype) as ApiClient & { baseUrl: string }
     api.baseUrl = 'http://localhost:8080/api'
 
-    await api.register({
-      name: 'User',
-      email: 'user@example.com',
-      password: 'password123',
-      password_confirmation: 'password123',
-    })
-    await api.verifyEmail({ email: 'user@example.com', code: '123456' })
-    await api.resendVerification({ email: 'user@example.com' })
     await api.login({ email: 'user@example.com', password: 'password123' })
-    await api.forgotPassword({ email: 'user@example.com' })
-    await api.resetPassword({
-      email: 'user@example.com',
-      code: '123456',
-      password: 'newpassword123',
-      password_confirmation: 'newpassword123',
-    })
 
-    for (const call of fetchMock.mock.calls) {
-      const options = call[1] as { headers?: Record<string, string> } | undefined
-      expect(options?.headers?.Authorization).toBeUndefined()
-    }
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://localhost:8080/sanctum/csrf-cookie')
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include' })
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('http://localhost:8080/api/login')
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+    })
   })
 
-  it('clears token and redirects to login on 401 response', async () => {
-    localStorage.setItem('auth_token', 'expired-token')
+  it('sends xsrf header and never uses Authorization header', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-token-value'
     const fetchMock = vi.mocked(globalThis.$fetch)
-    fetchMock.mockRejectedValueOnce({ statusCode: 401, data: { message: 'Unauthenticated' } })
+    fetchMock.mockResolvedValue({ success: true } as never)
 
     const api = Object.create(ApiClient.prototype) as ApiClient & { baseUrl: string }
     api.baseUrl = 'http://localhost:8080/api'
 
-    await expect(api.getUser()).rejects.toBeDefined()
+    await api.logout()
 
-    expect(localStorage.getItem('auth_token')).toBe(null)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const options = fetchMock.mock.calls[0]?.[1] as { headers?: Record<string, string> } | undefined
+    expect(options?.headers?.Authorization).toBeUndefined()
+    expect(options?.headers?.['X-XSRF-TOKEN']).toBe('csrf-token-value')
   })
 })

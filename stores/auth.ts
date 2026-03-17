@@ -9,7 +9,7 @@ import type {
   ResetPasswordRequest,
   UpdatePasswordRequest,
 } from '~/types/auth'
-import { useApiClient, setStoredToken, removeStoredToken, getStoredToken } from '~/utils/api'
+import { useApiClient } from '~/utils/api'
 
 const PENDING_EMAIL_KEY = 'pending_verification_email'
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -43,9 +43,16 @@ function removePendingEmailFromStorage(): void {
   }
 }
 
+function normalizeAuthUser(payload: unknown): User | null {
+  if (!payload || typeof payload !== 'object') return null
+  if ('user' in payload && payload.user && typeof payload.user === 'object') {
+    return payload.user as User
+  }
+  return payload as User
+}
+
 interface AuthState {
   user: User | null
-  token: string | null
   isLoading: boolean
   error: string | null
   pendingEmail: string | null
@@ -57,7 +64,6 @@ let initializePromise: Promise<void> | null = null
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    token: null,
     isLoading: false,
     error: null,
     pendingEmail: null,
@@ -65,26 +71,25 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isAuthenticated: (state) => !!state.token && !!state.user,
+    isAuthenticated: (state) => !!state.user,
     userName: (state) => state.user?.name ?? '',
     userEmail: (state) => state.user?.email ?? '',
   },
 
   actions: {
     async initialize() {
-      const storedToken = getStoredToken()
-
-      if (this.initialized) {
-        // Allow re-initialization when token appears in storage after first pass
-        // (e.g. hydration timing or token written by another flow).
-        if (!this.token && storedToken) {
-          this.initialized = false
-        } else {
-          return
+      if (import.meta.client) {
+        const storedPendingEmail = getPendingEmailFromStorage()
+        if (storedPendingEmail) {
+          this.pendingEmail = storedPendingEmail
         }
       }
 
-      if (this.token && this.user) {
+      if (this.initialized) {
+        return
+      }
+
+      if (this.user) {
         this.initialized = true
         return
       }
@@ -95,20 +100,10 @@ export const useAuthStore = defineStore('auth', {
       }
 
       initializePromise = (async () => {
-        // Restore pendingEmail from localStorage
-        const storedPendingEmail = getPendingEmailFromStorage()
-        if (storedPendingEmail) {
-          this.pendingEmail = storedPendingEmail
-        }
-
-        const token = storedToken ?? getStoredToken()
-        if (token) {
-          this.token = token
-          try {
-            await this.fetchUser()
-          } catch {
-            await this.logout()
-          }
+        try {
+          await this.fetchUser()
+        } catch {
+          this.user = null
         }
       })()
 
@@ -127,7 +122,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const api = useApiClient()
         const response = await api.register(data)
-        this.setPendingEmail(response.data.email)
+        this.setPendingEmail(data.email)
         return response
       } catch (err: unknown) {
         const errorMessage = this.extractErrorMessage(err)
@@ -145,11 +140,9 @@ export const useAuthStore = defineStore('auth', {
       try {
         const api = useApiClient()
         const response = await api.verifyEmail(data)
-
-        this.user = response.data.user
-        this.token = response.data.token
-        setStoredToken(response.data.token)
+        this.user = normalizeAuthUser(response.data)
         this.clearPendingEmail()
+        this.initialized = true
 
         return response
       } catch (err: unknown) {
@@ -184,10 +177,8 @@ export const useAuthStore = defineStore('auth', {
       try {
         const api = useApiClient()
         const response = await api.login(data)
-
         this.user = response.data.user
-        this.token = response.data.token
-        setStoredToken(response.data.token)
+        this.initialized = true
 
         return response
       } catch (err: unknown) {
@@ -201,7 +192,7 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       try {
-        if (this.token) {
+        if (this.user) {
           const api = useApiClient()
           await api.logout()
         }
@@ -209,9 +200,7 @@ export const useAuthStore = defineStore('auth', {
         // Ignore logout errors
       } finally {
         this.user = null
-        this.token = null
         this.clearPendingEmail()
-        removeStoredToken()
       }
     },
 
@@ -225,8 +214,6 @@ export const useAuthStore = defineStore('auth', {
         return response.data
       } catch (err: unknown) {
         this.user = null
-        this.token = null
-        removeStoredToken()
         throw err
       } finally {
         this.isLoading = false
