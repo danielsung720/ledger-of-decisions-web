@@ -4,6 +4,8 @@ const apiBase = configuredApiBase || '/api'
 
 const apiProxyTarget = process.env.NUXT_API_PROXY_TARGET || 'http://localhost:8080'
 const enableApiProxy = apiBase.startsWith('/')
+const canonicalOrigin =
+  process.env.NUXT_CANONICAL_ORIGIN || process.env.NUXT_PUBLIC_CANONICAL_ORIGIN || ''
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
@@ -28,6 +30,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private: proxy target for server-side (not exposed to client)
     apiProxyTarget,
+    // Optional: force all requests to a single public origin in production.
+    canonicalOrigin,
     public: {
       // Public API base used by the browser.
       apiBase,
