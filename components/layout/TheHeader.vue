@@ -106,14 +106,14 @@ const emit = defineEmits<{
           :to="item.href"
           :data-testid="`mobile-${item.testId}`"
           :class="[
-            'flex flex-1 flex-col items-center gap-1 py-3 text-caption font-medium transition-all duration-fast',
+            'flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3 text-caption font-medium transition-all duration-fast',
             isActive(item.href)
               ? 'bg-theme-primary-light text-theme-primary'
               : 'text-theme-text-secondary',
           ]"
         >
           <AppIcon :name="item.icon" class="h-5 w-5" />
-          <span>{{ item.name }}</span>
+          <span class="w-full truncate text-center">{{ item.name }}</span>
         </NuxtLink>
       </div>
     </nav>

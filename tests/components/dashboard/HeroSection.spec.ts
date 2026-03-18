@@ -7,6 +7,11 @@ describe('HeroSection', () => {
     totalAmount: 25000,
     totalCount: 42,
     impulseRatio: 18,
+    todayAmount: 1200,
+    todayCount: 3,
+    weekAmount: 8500,
+    weekCount: 15,
+    impulseCount: 5,
   }
 
   const defaultStubs = {
@@ -56,78 +61,54 @@ describe('HeroSection', () => {
       expect(wrapper.text()).toContain('$25,000')
     })
 
-    it('renders total count', () => {
-      const wrapper = mount(HeroSection, {
-        props: defaultProps,
-        global: { stubs: defaultStubs },
-      })
-
-      expect(wrapper.text()).toContain('共 42 筆')
-    })
-
     it('renders monthly label', () => {
       const wrapper = mount(HeroSection, {
         props: defaultProps,
         global: { stubs: defaultStubs },
       })
 
-      expect(wrapper.text()).toContain('本月消費')
+      expect(wrapper.text()).toContain('本月支出')
     })
 
-    it('renders impulse ratio as percentage', () => {
+    it('renders impulse ratio percentage', () => {
       const wrapper = mount(HeroSection, {
         props: defaultProps,
         global: { stubs: defaultStubs },
       })
 
+      expect(wrapper.text()).toContain('衝動佔比')
       expect(wrapper.text()).toContain('18%')
     })
 
-    it('renders impulse ratio label', () => {
+    it('renders today stats', () => {
       const wrapper = mount(HeroSection, {
         props: defaultProps,
         global: { stubs: defaultStubs },
       })
 
-      expect(wrapper.text()).toContain('衝動消費佔比')
+      expect(wrapper.text()).toContain('今日消費')
+      expect(wrapper.text()).toContain('$1,200')
+      expect(wrapper.text()).toContain('3 筆記錄')
     })
-  })
 
-  describe('impulse ratio styling', () => {
-    it('applies success color when ratio <= 20%', () => {
+    it('renders week stats', () => {
       const wrapper = mount(HeroSection, {
-        props: { ...defaultProps, impulseRatio: 15 },
+        props: defaultProps,
         global: { stubs: defaultStubs },
       })
 
-      expect(wrapper.find('.text-theme-success').exists()).toBe(true)
+      expect(wrapper.text()).toContain('本週消費')
+      expect(wrapper.text()).toContain('$8,500')
+      expect(wrapper.text()).toContain('15 筆記錄')
     })
 
-    it('shows positive message when ratio <= 20%', () => {
+    it('renders impulse count', () => {
       const wrapper = mount(HeroSection, {
-        props: { ...defaultProps, impulseRatio: 15 },
+        props: defaultProps,
         global: { stubs: defaultStubs },
       })
 
-      expect(wrapper.text()).toContain('控制得不錯')
-    })
-
-    it('applies alert color when ratio > 20%', () => {
-      const wrapper = mount(HeroSection, {
-        props: { ...defaultProps, impulseRatio: 25 },
-        global: { stubs: defaultStubs },
-      })
-
-      expect(wrapper.find('.text-theme-error').exists()).toBe(true)
-    })
-
-    it('shows improvement message when ratio > 20%', () => {
-      const wrapper = mount(HeroSection, {
-        props: { ...defaultProps, impulseRatio: 25 },
-        global: { stubs: defaultStubs },
-      })
-
-      expect(wrapper.text()).toContain('可以再改善')
+      expect(wrapper.text()).toContain('5 筆衝動消費')
     })
   })
 

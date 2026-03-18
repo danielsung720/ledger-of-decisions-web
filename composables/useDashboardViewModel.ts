@@ -98,6 +98,7 @@ export function useDashboardViewModel(options: UseDashboardViewModelOptions = {}
   return {
     expenses,
     expensesLoading,
+    summaryLoading,
     totalAmount,
     totalCount,
     impulseRatio,
