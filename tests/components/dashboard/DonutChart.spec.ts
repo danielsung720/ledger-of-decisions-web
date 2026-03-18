@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 import DonutChart from '~/components/dashboard/DonutChart.vue'
 
 vi.mock('vue-chartjs', () => ({
@@ -11,6 +12,7 @@ vi.mock('vue-chartjs', () => ({
 describe('DonutChart', () => {
   it('renders chart title and test id', () => {
     const wrapper = mount(DonutChart, {
+      global: { plugins: [createPinia()] },
       props: {
         data: [],
       },
@@ -23,6 +25,7 @@ describe('DonutChart', () => {
 
   it('renders five legend rows with computed percentages', () => {
     const wrapper = mount(DonutChart, {
+      global: { plugins: [createPinia()] },
       props: {
         data: [
           { intent: 'necessity', intent_label: '必要', total_amount: 600, count: 4 },
@@ -41,6 +44,7 @@ describe('DonutChart', () => {
 
   it('shows zero legend values for empty state', () => {
     const wrapper = mount(DonutChart, {
+      global: { plugins: [createPinia()] },
       props: {
         data: [],
       },
@@ -52,6 +56,7 @@ describe('DonutChart', () => {
 
   it('adds pulse class when loading', () => {
     const wrapper = mount(DonutChart, {
+      global: { plugins: [createPinia()] },
       props: {
         data: [],
         loading: true,

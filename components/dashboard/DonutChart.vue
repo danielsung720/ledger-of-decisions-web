@@ -4,6 +4,7 @@ import type { ChartData, ChartOptions, Plugin } from 'chart.js'
 import type { IntentStats } from '~/types'
 import { INTENT_COLORS, INTENT_OPTIONS } from '~/utils/constants'
 import { formatCurrency } from '~/utils/formatters'
+import { useThemeStore } from '~/stores/theme'
 
 interface Props {
   data: IntentStats[]
@@ -15,6 +16,8 @@ const props = withDefaults(defineProps<Props>(), {
   title: '意圖分布',
   loading: false,
 })
+
+const themeStore = useThemeStore()
 
 const activeIndex = ref<number | null>(null)
 
@@ -117,40 +120,49 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
   },
 }))
 
-const centerTextPlugin = computed<Plugin<'doughnut'>>(() => ({
-  id: 'dashboard-center-text',
-  beforeDraw: (chart) => {
-    const { ctx, chartArea } = chart
+const centerTextPlugin = computed<Plugin<'doughnut'>>(() => {
+  // Access currentTheme to force recompute when theme changes
+  const _theme = themeStore.currentTheme
 
-    if (!chartArea) return
+  return {
+    id: 'dashboard-center-text',
+    beforeDraw: (chart) => {
+      const { ctx, chartArea } = chart
 
-    const centerX = (chartArea.left + chartArea.right) / 2
-    const centerY = (chartArea.top + chartArea.bottom) / 2
+      if (!chartArea) return
 
-    const mainText = props.loading ? '' : isEmpty.value ? '—' : `${totalCount.value}`
-    const subText = props.loading ? '' : isEmpty.value ? '尚無消費記錄' : '本月記錄'
+      const centerX = (chartArea.left + chartArea.right) / 2
+      const centerY = (chartArea.top + chartArea.bottom) / 2
 
-    if (!mainText && !subText) return
+      const mainText = props.loading ? '' : isEmpty.value ? '—' : `${totalCount.value}`
+      const subText = props.loading ? '' : isEmpty.value ? '尚無消費記錄' : '本月記錄'
 
-    ctx.save()
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+      if (!mainText && !subText) return
 
-    if (mainText) {
-      ctx.fillStyle = isEmpty.value ? '#B8AC9E' : '#3D3833'
-      ctx.font = `700 ${isEmpty.value ? 20 : 24}px "DM Sans", "Inter", sans-serif`
-      ctx.fillText(mainText, centerX, centerY - 8)
-    }
+      const styles = getComputedStyle(document.documentElement)
+      const textColor = styles.getPropertyValue('--color-text').trim()
+      const mutedColor = styles.getPropertyValue('--color-text-muted').trim()
 
-    if (subText) {
-      ctx.fillStyle = '#8C8279'
-      ctx.font = '400 11px "Inter", "Noto Sans TC", sans-serif'
-      ctx.fillText(subText, centerX, centerY + 13)
-    }
+      ctx.save()
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
 
-    ctx.restore()
-  },
-}))
+      if (mainText) {
+        ctx.fillStyle = isEmpty.value ? mutedColor : textColor
+        ctx.font = `700 ${isEmpty.value ? 20 : 24}px "DM Sans", "Inter", sans-serif`
+        ctx.fillText(mainText, centerX, centerY - 8)
+      }
+
+      if (subText) {
+        ctx.fillStyle = textColor
+        ctx.font = '400 11px "Inter", "Noto Sans TC", sans-serif'
+        ctx.fillText(subText, centerX, centerY + 13)
+      }
+
+      ctx.restore()
+    },
+  }
+})
 
 function legendOpacity(index: number): number {
   if (activeIndex.value === null) return 1
@@ -160,7 +172,7 @@ function legendOpacity(index: number): number {
 
 <template>
   <div
-    class="rounded-lg border border-cream-200 bg-theme-surface p-6"
+    class="rounded-lg border border-theme-border bg-theme-surface p-6"
     data-testid="intent-donut-chart"
   >
     <h3 class="mb-5 text-body-md font-medium text-theme-text-secondary">{{ title }}</h3>
@@ -182,16 +194,16 @@ function legendOpacity(index: number): number {
         >
           <div class="flex min-w-0 items-center gap-2">
             <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: item.color }" />
-            <span class="truncate text-[12px] font-medium leading-[1.2] text-warm-gray-700">{{
+            <span class="truncate text-[12px] font-medium leading-[1.2] text-theme-text">{{
               item.label
             }}</span>
           </div>
 
           <div class="ml-2 flex items-center gap-2 text-[12px] leading-[1.2]">
-            <span class="font-number text-warm-gray-500">{{ formatCurrency(item.amount) }}</span>
-            <span class="font-number font-semibold text-warm-gray-900"
-              >{{ item.percentage.toFixed(0) }}%</span
-            >
+            <span class="font-number font-semibold text-theme-text">{{
+              formatCurrency(item.amount)
+            }}</span>
+            <span class="font-number text-theme-text">{{ item.percentage.toFixed(0) }}%</span>
           </div>
         </div>
       </div>
