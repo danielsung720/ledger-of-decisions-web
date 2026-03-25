@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import ExpenseForm from '~/components/expense/ExpenseForm.vue'
@@ -101,5 +101,44 @@ describe('ExpenseForm', () => {
     expect(vm.formData.confidence_level).toBe(null)
     expect(vm.formData.decision_note).toBe('')
     expect(vm.formData.occurred_at).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+  })
+
+  it('scrolls and focuses the first invalid field when submit validation fails', async () => {
+    const scrollIntoViewMock = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      value: scrollIntoViewMock,
+      configurable: true,
+      writable: true,
+    })
+
+    const wrapper = mount(ExpenseForm, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          AppInput: AppInputStub,
+          AppSelect: AppSelectStub,
+          AppDatePicker: AppDatePickerStub,
+          AppTextarea: AppTextareaStub,
+          AppButton: AppButtonStub,
+          IntentSelector: IntentSelectorStub,
+          ConfidenceSelector: ConfidenceSelectorStub,
+        },
+      },
+    })
+
+    await wrapper.get('form').trigger('submit.prevent')
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('submit')).toBeUndefined()
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+
+    const amountField = wrapper.get('[data-error-field="amount"]').element as HTMLElement
+    const amountInput = amountField.querySelector('input')
+
+    expect(amountField.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(amountInput)
+
+    wrapper.unmount()
   })
 })
