@@ -88,6 +88,7 @@ const emit = defineEmits<{
           <button
             v-if="isAuthenticated"
             type="button"
+            data-testid="mobile-add-expense-button"
             class="btn-icon md:hidden"
             @click="emit('openExpenseModal')"
           >
